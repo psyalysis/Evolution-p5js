@@ -16,12 +16,13 @@
         let numCritters = 30;
         let moveSpeed = 2;
         let frameCount = 0;
-        let gameRate = 1;
+        let gameRate = 10;
+
+        let childSize = 0.75
+        let sizeSpeedNerf = 5;
 
         let redCount = 0;
         let blueCount = 0;
-        let gameOverStatus = false;
-
 
         
         function setup() {
@@ -31,12 +32,13 @@
             }
         }
         function draw() {
-            redCount = 0;
-            blueCount = 0;
-            gameOverStatus = gameOver();
-            if (gameOverStatus) {
+            if (gameOver()) {
                 return;
             }
+            
+            redCount = 0;
+            blueCount = 0;
+            
             background(0);
             if (frameCount % (300 / gameRate) === 0) {
                 food.push(new Food());
@@ -47,17 +49,18 @@
                 circle(food[i].location.x, food[i].location.y, 10);
             }
             for (let i = 0; i < critters.length; i++) {
+                if (critters[i].team === "red") {
+                    redCount++;
+                } else {
+                    blueCount++;
+                }
                 fill(critters[i].team);
                 circle(critters[i].location.x, critters[i].location.y, critters[i].size);
                 critters[i].move(food);
                 critters[i].eat(food);
                 critters[i].kill(critters);
 
-                if (critters[i].team === "red") {
-                    redCount++;
-                } else {
-                    blueCount++;
-                }
+                
             }
             
             fill("white");
@@ -68,19 +71,25 @@
         }
 
         function gameOver() {
-            if (redCount === 0 && blueCount >= 0) {
+            if (redCount === 0 && blueCount > 0) {
                 text("Blue wins!", width / 2, height / 2);
-                gameOverStatus = true;
-            } else if (blueCount === 0 && redCount >= 0) {
+                return true;
+            } else if (blueCount === 0 && redCount > 0) {
                 text("Red wins!", width / 2, height / 2);
-                gameOverStatus = true;
+                return true;
+            } else {
+                return false;
             }
         }
 
         class Critter {
-            constructor(team) {
+            constructor(team, parentSize) {
                 this.team = team;
-                this.size = random(10, 30);
+                if (parentSize) {
+                    this.size = random(10, 30) * parentSize;
+                } else {
+                    this.size = random(10, 30);
+                }
                 this.location = { x: random(0, width), y: random(0, height) };
             }
             move(food) {
@@ -96,8 +105,8 @@
                 if (closestFood) {
                     let direction = [closestFood.location.x - this.location.x, closestFood.location.y - this.location.y];
                     let angle = atan2(direction[1], direction[0]);
-                    let moveX = moveSpeed / (this.size / 3) * cos(angle);
-                    let moveY = moveSpeed / (this.size / 3) * sin(angle);
+                    let moveX = moveSpeed / (this.size / sizeSpeedNerf) * cos(angle);
+                    let moveY = moveSpeed / (this.size / sizeSpeedNerf) * sin(angle);
                     this.location.x += moveX * gameRate;
                     this.location.y += moveY * gameRate;
                 }
@@ -106,9 +115,9 @@
                 if (food.length > 0) {
                     for (let i = 0; i < food.length; i++) {
                         if (dist(this.location.x, this.location.y, food[i].location.x, food[i].location.y) < this.size / 2) {
-                            this.size += food[i].size / 2;
+                            this.size += food[i].size / (this.size / 5);
                             food.splice(i, 1);
-                            critters.push(new Critter(this.team));
+                            critters.push(new Critter(this.team, this.size));
                             }
                         }
                     }
